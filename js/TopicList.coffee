@@ -116,8 +116,10 @@ class TopicList extends Class
 		if @parent_topic_uri # Topic group listing
 			where = "WHERE parent_topic_uri = '#{@parent_topic_uri}' OR row_topic_uri = '#{@parent_topic_uri}'"
 		else # Main listing
-			where = "WHERE topic.type IS NULL AND topic.parent_topic_uri IS NULL "
+			where = "WHERE topic.type IS NULL AND topic.parent_topic_uri IS NULL"
 		last_elem = $(".topics-list .topic.template")
+
+		sql_sticky = ("WHEN '#{topic_uri}' THEN 1" for topic_uri in Page.site_info.content.settings.topic_sticky_uris).join(" ")
 
 		query = """
 			SELECT
@@ -127,14 +129,16 @@ class TopicList extends Class
 			 topic_creator_content.directory AS topic_creator_address,
 			 topic.topic_id || '_' || topic_creator_content.directory AS row_topic_uri,
 			 NULL AS row_topic_sub_uri,
-			 (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes
+			 (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes,
+			 CASE topic.topic_id || '_' || topic_creator_content.directory #{sql_sticky} ELSE 0 END AS sticky
 			FROM topic
 			LEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id)
 			LEFT JOIN json AS topic_creator_content ON (topic_creator_content.directory = topic_creator_json.directory AND topic_creator_content.file_name = 'content.json')
 			LEFT JOIN keyvalue AS topic_creator_user ON (topic_creator_user.json_id = topic_creator_content.json_id AND topic_creator_user.key = 'cert_user_id')
-			LEFT JOIN comment ON (comment.topic_uri = row_topic_uri)
+			LEFT JOIN comment ON (comment.topic_uri = row_topic_uri AND comment.added < #{Date.now()/1000+120})
 			#{where}
 			GROUP BY topic.topic_id, topic.json_id
+			HAVING last_action < #{Date.now()/1000+120}
 		"""
 
 		if not @parent_topic_uri # Union topic groups
@@ -143,13 +147,14 @@ class TopicList extends Class
 				UNION ALL
 
 				SELECT
-				 COUNT(comment_id) AS comments_num, MAX(comment.added) AS last_comment, MAX(topic_sub.added) AS last_added, CASE WHEN MAX(topic_sub.added) > MAX(comment.added) THEN MAX(topic_sub.added) ELSE MAX(comment.added) END as last_action,
+				 COUNT(comment_id) AS comments_num, MAX(comment.added) AS last_comment, MAX(topic_sub.added) AS last_added, CASE WHEN MAX(topic_sub.added) > MAX(comment.added) OR MAX(comment.added) IS NULL THEN MAX(topic_sub.added) ELSE MAX(comment.added) END as last_action,
 				 topic.*,
 				 topic_creator_user.value AS topic_creator_user_name,
 				 topic_creator_content.directory AS topic_creator_address,
 				 topic.topic_id || '_' || topic_creator_content.directory AS row_topic_uri,
 				 topic_sub.topic_id || '_' || topic_sub_creator_content.directory AS row_topic_sub_uri,
-				 (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes
+				 (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes,
+				 CASE topic.topic_id || '_' || topic_creator_content.directory #{sql_sticky} ELSE 0 END AS sticky
 				FROM topic
 				LEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id)
 				LEFT JOIN json AS topic_creator_content ON (topic_creator_content.directory = topic_creator_json.directory AND topic_creator_content.file_name = 'content.json')
@@ -157,13 +162,14 @@ class TopicList extends Class
 				LEFT JOIN topic AS topic_sub ON (topic_sub.parent_topic_uri = topic.topic_id || '_' || topic_creator_content.directory)
 				LEFT JOIN json AS topic_sub_creator_json ON (topic_sub_creator_json.json_id = topic_sub.json_id)
 				LEFT JOIN json AS topic_sub_creator_content ON (topic_sub_creator_content.directory = topic_sub_creator_json.directory AND topic_sub_creator_content.file_name = 'content.json')
-				LEFT JOIN comment ON (comment.topic_uri = row_topic_sub_uri)
+				LEFT JOIN comment ON (comment.topic_uri = row_topic_sub_uri AND comment.added < #{Date.now()/1000+120})
 				WHERE topic.type = "group"
 				GROUP BY topic.topic_id
+				HAVING last_action < #{Date.now()/1000+120}
 			"""
 
 		if not @list_all and not @parent_topic_uri
-			query += " ORDER BY last_action DESC LIMIT 30"
+			query += " ORDER BY sticky DESC, last_action DESC LIMIT 30"
 
 
 		Page.cmd "dbQuery", [query], (topics) =>
@@ -317,7 +323,7 @@ class TopicList extends Class
 	submitCreateTopic: ->
 		# if not Page.hasOpenPort() then return false
 		if not Page.site_info.cert_user_id # No selected cert
-			Page.cmd "wrapperNotification", ["info", "Please, your choose account before creating a topic."]
+			Page.cmd "certSelect", [["zeroid.bit"]]
 			return false
 
 		title = $(".topic-new #topic_title").val().trim()
@@ -349,7 +355,7 @@ class TopicList extends Class
 
 	submitTopicVote: (e) =>
 		if not Page.site_info.cert_user_id # No selected cert
-			Page.cmd "wrapperNotification", ["info", "Please, your choose account before upvoting."]
+			Page.cmd "certSelect", [["zeroid.bit"]]
 			return false
 
 		elem = $(e.currentTarget)

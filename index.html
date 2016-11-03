@@ -39,10 +39,22 @@
 </div>
 <!-- EOF editbar -->
 
-
 <!-- Head -->
+<div class="topmenu">
+ <div class="links">
+  Forums:
+  <a href="http://127.0.0.1:43110/Talk.ZeroNetwork.bit">Main</a> &middot;
+  <a href="http://127.0.0.1:43110/165eqHdoQfyf7CVGqtVCGNDvMBZhwVSJBL">Español</a> &middot;
+  <a href="http://127.0.0.1:43110/1Vp5LH4wegCaqeB72yMw2jgNdVm4aR7ET">Français</a> &middot;
+  <a href="http://127.0.0.1:43110/1GRYnz73jSXoMMZNU3nSmbCFA3twuitcoo">Polish</a> &middot;
+  <a href="http://127.0.0.1:43110/1LULE6frq3kw2vbhe4i6ArUTo4YT99Czbj">Português</a> &middot;
+  <a href="http://127.0.0.1:43110/1Apr5ba6u9Nz6eFASmFrefGvyBKkM76QgE">Russian</a> &middot;
+  <a href="http://127.0.0.1:43110/1Nse6WcodQ5Mj6ZwvZvuyCVvQESwuxbCUy">中文</a>
+ </div>
+</div>
+
 <div class="head">
- <a class='logo nolink' href="?Home">Zer0<br>Talk</a>
+ <a class="logo nolink" href="?Home">Zer0<br>Talk</a>
 </div>
 <!-- EOF Head -->
 
@@ -99,7 +111,7 @@
 <!-- Page: Topic -->
 <div class="center topics-full">
 
- <h1 class="topic-title"><span class='parent-link'><a href='?Main'>Main</a> &rsaquo;</span> <span class='parent-link'><a href='?Main'>ZeroNet news</a> &rsaquo; </span> <span class="parent-link">How did you find ZeroNet?</span></h1>
+ <h1 class="topic-title">&nbsp;</h1>
 
  <div class="topic topic-full">
   <a href="#" class="image nolink"><div class="icon icon-topic-chat"></div></a>
@@ -160,7 +172,11 @@
 </div>
 <!-- EOF Template: menu -->
 
-<script type="text/javascript" src="js/all.js" async></script>
-
+<script type="text/javascript" src="js/all.js"></script>
+<script>
+$(".topmenu a").each( function(i, elem) {
+    $(elem).attr("href", Text.fixLink($(elem).attr("href")))
+});
+</script>
 </body>
 </html>

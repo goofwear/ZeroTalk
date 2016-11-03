@@ -6,6 +6,7 @@ class TopicShow extends Class
 		@topic = null
 
 		@list_all = false
+		$(".topic-title").css("display", "none")
 		@loadTopic()
 		@loadComments("noanim")
 
@@ -76,7 +77,6 @@ class TopicShow extends Class
 		@logStart "Loading topic..."
 
 		$(".topic-full").attr("id", "topic_#{@topic_uri}")
-		$(".topic-title").css("display", "none")
 
 		Page.cmd "dbQuery", [@queryTopic(@topic_id, @topic_user_address)], (res) =>
 			@topic = res[0]
@@ -84,7 +84,7 @@ class TopicShow extends Class
 
 			# Topic has parent, update title breadcrumb
 			if @topic.parent_topic_uri
-				$(".topic-title").html("&nbsp;").css("display", "")
+				$(".topic-title").css("display", "")
 				[parent_topic_id, parent_topic_user_address] = @topic.parent_topic_uri.split("_")
 				Page.cmd "dbQuery", [@queryTopic(parent_topic_id, parent_topic_user_address)], (parent_res) =>
 					parent_topic = parent_res[0]
@@ -116,7 +116,7 @@ class TopicShow extends Class
 			 LEFT JOIN json AS user_json_data ON (user_json_data.json_id = comment.json_id)
 			 LEFT JOIN json AS user_json_content ON (user_json_content.directory = user_json_data.directory AND user_json_content.file_name = 'content.json')
 			 LEFT JOIN keyvalue AS user ON (user.json_id = user_json_content.json_id AND user.key = 'cert_user_id')
-			WHERE comment.topic_uri = '#{@topic_id}_#{@topic_user_address}'
+			WHERE comment.topic_uri = '#{@topic_id}_#{@topic_user_address}' AND added < #{Date.now()/1000+120}
 			ORDER BY added DESC
 			"
 
@@ -124,6 +124,7 @@ class TopicShow extends Class
 			query += " LIMIT 60"
 
 		Page.cmd "dbQuery", [query], (comments) =>
+			focused = $(":focus")
 			@logEnd "Loading comments..."
 			$(".comments .comment:not(.template)").attr("missing", "true")
 			for comment in comments
@@ -155,6 +156,7 @@ class TopicShow extends Class
 			else
 				Page.local_storage["topic.#{@topic_id}_#{@topic_user_address}.visited"] = @topic.added
 			Page.cmd "wrapperSetLocalStorage", Page.local_storage
+			focused.focus()
 
 			if cb then cb()
 

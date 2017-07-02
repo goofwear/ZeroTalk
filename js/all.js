@@ -509,6 +509,7 @@ jQuery.extend( jQuery.easing,
       this.menu = new Menu(this.elem);
       this.feeds = {};
       this.follows = {};
+      this.elem.off("click");
       this.elem.on("click", (function(_this) {
         return function() {
           if (Page.server_info.rev > 850) {
@@ -523,19 +524,39 @@ jQuery.extend( jQuery.easing,
           return false;
         };
       })(this));
+      this.elem.css("display", "inline-block");
+      this.width_following = this.elem.find(".text-following").width();
+      this.width_follow = this.elem.find(".text-follow").width();
+      this.elem.css("display", "none");
     }
 
     Follow.prototype.init = function() {
       if (!this.feeds) {
         return;
       }
-      return Page.cmd("feedListFollow", [], (function(_this) {
+      Page.cmd("feedListFollow", [], (function(_this) {
         return function(_at_follows) {
-          var is_default_feed, menu_item, param, query, title, _ref, _ref1;
+          var is_default_feed, menu_item, param, queries, query, title, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
           _this.follows = _at_follows;
+          queries = {};
           _ref = _this.feeds;
           for (title in _ref) {
             _ref1 = _ref[title], query = _ref1[0], menu_item = _ref1[1], is_default_feed = _ref1[2], param = _ref1[3];
+            queries[query] = title;
+          }
+          _ref2 = _this.follows;
+          for (title in _ref2) {
+            _ref3 = _ref2[title], query = _ref3[0], param = _ref3[1];
+            _this.log(title, "->", queries[query]);
+            if (queries[query] && title !== queries[query]) {
+              _this.log("Renamed query", title, "->", queries[query]);
+              _this.follows[queries[query]] = _this.follows[title];
+              delete _this.follows[title];
+            }
+          }
+          _ref4 = _this.feeds;
+          for (title in _ref4) {
+            _ref5 = _ref4[title], query = _ref5[0], menu_item = _ref5[1], is_default_feed = _ref5[2], param = _ref5[3];
             if (_this.follows[title] && __indexOf.call(_this.follows[title][1], param) >= 0) {
               menu_item.addClass("selected");
             } else {
@@ -546,6 +567,14 @@ jQuery.extend( jQuery.easing,
           return _this.elem.css("display", "inline-block");
         };
       })(this));
+      return setTimeout(((function(_this) {
+        return function() {
+          if (typeof Page.site_info.feed_follow_num !== "undefined" && Page.site_info.feed_follow_num === null) {
+            _this.log("Following default feeds");
+            return _this.followDefaultFeeds();
+          }
+        };
+      })(this)), 100);
     };
 
     Follow.prototype.addFeed = function(title, query, is_default_feed, param) {
@@ -587,48 +616,47 @@ jQuery.extend( jQuery.easing,
 
     Follow.prototype.updateListitems = function() {
       if (this.menu.elem.find(".selected").length > 0) {
-        return this.elem.addClass("following");
+        this.elem.addClass("following");
+        this.elem.find(".text-follow").width(0);
+        return this.elem.find(".text-following").width(this.width_following + 5);
       } else {
-        return this.elem.removeClass("following");
+        this.elem.removeClass("following");
+        this.elem.find(".text-following").width(0);
+        return this.elem.find(".text-follow").width(this.width_follow + 5);
       }
     };
 
     Follow.prototype.saveFeeds = function() {
-      return Page.cmd("feedListFollow", [], (function(_this) {
-        return function(follows) {
-          var is_default_feed, item, menu_item, param, params, query, title, _ref, _ref1;
-          _this.follows = follows;
-          _ref = _this.feeds;
-          for (title in _ref) {
-            _ref1 = _ref[title], query = _ref1[0], menu_item = _ref1[1], is_default_feed = _ref1[2], param = _ref1[3];
-            if (follows[title]) {
-              params = (function() {
-                var _i, _len, _ref2, _results;
-                _ref2 = follows[title][1];
-                _results = [];
-                for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-                  item = _ref2[_i];
-                  if (item !== param) {
-                    _results.push(item);
-                  }
-                }
-                return _results;
-              })();
-            } else {
-              params = [];
+      var is_default_feed, item, menu_item, param, params, query, title, _ref, _ref1;
+      _ref = this.feeds;
+      for (title in _ref) {
+        _ref1 = _ref[title], query = _ref1[0], menu_item = _ref1[1], is_default_feed = _ref1[2], param = _ref1[3];
+        if (this.follows[title]) {
+          params = (function() {
+            var _i, _len, _ref2, _results;
+            _ref2 = this.follows[title][1];
+            _results = [];
+            for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+              item = _ref2[_i];
+              if (item !== param) {
+                _results.push(item);
+              }
             }
-            if (menu_item.hasClass("selected")) {
-              params.push(param);
-            }
-            if (params.length === 0) {
-              delete follows[title];
-            } else {
-              follows[title] = [query, params];
-            }
-          }
-          return Page.cmd("feedFollow", [follows]);
-        };
-      })(this));
+            return _results;
+          }).call(this);
+        } else {
+          params = [];
+        }
+        if (menu_item.hasClass("selected")) {
+          params.push(param);
+        }
+        if (params.length === 0) {
+          delete this.follows[title];
+        } else {
+          this.follows[title] = [query, params];
+        }
+      }
+      return Page.cmd("feedFollow", [this.follows]);
     };
 
     return Follow;
@@ -1113,6 +1141,17 @@ jQuery.extend( jQuery.easing,
 }).call(this);
 
 
+/* ---- /1TaLkFrMwvbNsooF4ioKAY9EuxTBTjipT/js/utils/Translate.coffee ---- */
+
+
+(function() {
+  window._ = function(s) {
+    return s;
+  };
+
+}).call(this);
+
+
 /* ---- /1TaLkFrMwvbNsooF4ioKAY9EuxTBTjipT/js/utils/ZeroFrame.coffee ---- */
 
 
@@ -1250,15 +1289,15 @@ jQuery.extend( jQuery.easing,
 
 (function() {
   var TopicList,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __hasProp = {}.hasOwnProperty;
+    bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
 
-  TopicList = (function(_super) {
-    __extends(TopicList, _super);
+  TopicList = (function(superClass) {
+    extend(TopicList, superClass);
 
     function TopicList() {
-      this.submitTopicVote = __bind(this.submitTopicVote, this);
+      this.submitTopicVote = bind(this.submitTopicVote, this);
       this.thread_sorter = null;
       this.parent_topic_uri = void 0;
       this.list_all = false;
@@ -1267,10 +1306,10 @@ jQuery.extend( jQuery.easing,
     }
 
     TopicList.prototype.actionList = function(parent_topic_id, parent_topic_user_address) {
-      var topic_sticky_uri, _i, _len, _ref;
-      _ref = Page.site_info.content.settings.topic_sticky_uris;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        topic_sticky_uri = _ref[_i];
+      var i, len, ref, topic_sticky_uri;
+      ref = Page.site_info.content.settings.topic_sticky_uris;
+      for (i = 0, len = ref.length; i < len; i++) {
+        topic_sticky_uri = ref[i];
         this.topic_sticky_uris[topic_sticky_uri] = 1;
       }
       $(".topics-loading").cssLater("top", "0px", 200);
@@ -1285,6 +1324,10 @@ jQuery.extend( jQuery.easing,
       this.loadTopics("noanim");
       $(".topic-new-link").on("click", (function(_this) {
         return function() {
+          if (Page.site_info.address === "1TaLkFrMwvbNsooF4ioKAY9EuxTBTjipT") {
+            $(".topmenu").css("background-color", "#fffede");
+            $(".topic-new .message").css("display", "block");
+          }
           $(".topic-new").fancySlideDown();
           $(".topic-new-link").slideUp();
           return false;
@@ -1313,7 +1356,7 @@ jQuery.extend( jQuery.easing,
       if (this.parent_topic_uri) {
         this.follow.addFeed("New topics in this group", "SELECT title AS title, body, added AS date_added, 'topic' AS type, '?Topic:' || topic.topic_id || '_' || topic_creator_json.directory AS url, parent_topic_uri AS param FROM topic LEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id) WHERE parent_topic_uri IN (:params)", true, this.parent_topic_uri);
       } else {
-        this.follow.addFeed("New topics", "SELECT title AS title, body, added AS date_added, 'topic' AS type, '?Topic:' || topic.topic_id || '_' || topic_creator_json.directory AS url FROM topic LEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id) WHERE parent_topic_uri IS NULL", true);
+        this.follow.addFeed(_("New topics"), "SELECT title AS title, body, added AS date_added, 'topic' AS type, '?Topic:' || topic.topic_id || '_' || topic_creator_json.directory AS url FROM topic LEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id) WHERE parent_topic_uri IS NULL", true);
         if (Page.site_info.cert_user_id) {
           username = Page.site_info.cert_user_id.replace(/@.*/, "");
           this.follow.addFeed("Username mentions", "SELECT 'mention' AS type, comment.added AS date_added, topic.title, commenter_user.value || ': ' || comment.body AS body, topic_creator_json.directory AS topic_creator_address, topic.topic_id || '_' || topic_creator_json.directory AS row_topic_uri, '?Topic:' || topic.topic_id || '_' || topic_creator_json.directory AS url FROM topic LEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id) LEFT JOIN comment ON (comment.topic_uri = row_topic_uri) LEFT JOIN json AS commenter_json ON (commenter_json.json_id = comment.json_id) LEFT JOIN json AS commenter_content ON (commenter_content.directory = commenter_json.directory AND commenter_content.file_name = 'content.json') LEFT JOIN keyvalue AS commenter_user ON (commenter_user.json_id = commenter_content.json_id AND commenter_user.key = 'cert_user_id') WHERE comment.body LIKE '%[" + username + "%' OR comment.body LIKE '%@" + username + "%'", true);
@@ -1324,7 +1367,7 @@ jQuery.extend( jQuery.easing,
     };
 
     TopicList.prototype.loadTopics = function(type, cb) {
-      var last_elem, query, sql_sticky, topic_uri, where;
+      var last_elem, query, ref, sql_sticky, sql_sticky_whens, topic_uri, where;
       if (type == null) {
         type = "list";
       }
@@ -1338,26 +1381,31 @@ jQuery.extend( jQuery.easing,
         where = "WHERE topic.type IS NULL AND topic.parent_topic_uri IS NULL";
       }
       last_elem = $(".topics-list .topic.template");
-      sql_sticky = ((function() {
-        var _i, _len, _ref, _results;
-        _ref = Page.site_info.content.settings.topic_sticky_uris;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          topic_uri = _ref[_i];
-          _results.push("WHEN '" + topic_uri + "' THEN 1");
-        }
-        return _results;
-      })()).join(" ");
-      query = "SELECT\n COUNT(comment_id) AS comments_num, MAX(comment.added) AS last_comment, topic.added as last_added, CASE WHEN MAX(comment.added) IS NULL THEN topic.added ELSE MAX(comment.added) END as last_action,\n topic.*,\n topic_creator_user.value AS topic_creator_user_name,\n topic_creator_content.directory AS topic_creator_address,\n topic.topic_id || '_' || topic_creator_content.directory AS row_topic_uri,\n NULL AS row_topic_sub_uri,\n (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes,\n CASE topic.topic_id || '_' || topic_creator_content.directory " + sql_sticky + " ELSE 0 END AS sticky\nFROM topic\nLEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id)\nLEFT JOIN json AS topic_creator_content ON (topic_creator_content.directory = topic_creator_json.directory AND topic_creator_content.file_name = 'content.json')\nLEFT JOIN keyvalue AS topic_creator_user ON (topic_creator_user.json_id = topic_creator_content.json_id AND topic_creator_user.key = 'cert_user_id')\nLEFT JOIN comment ON (comment.topic_uri = row_topic_uri AND comment.added < " + (Date.now() / 1000 + 120) + ")\n" + where + "\nGROUP BY topic.topic_id, topic.json_id\nHAVING last_action < " + (Date.now() / 1000 + 120);
+      if (((ref = Page.site_info.content.settings.topic_sticky_uris) != null ? ref.length : void 0) > 0) {
+        sql_sticky_whens = ((function() {
+          var i, len, ref1, results;
+          ref1 = Page.site_info.content.settings.topic_sticky_uris;
+          results = [];
+          for (i = 0, len = ref1.length; i < len; i++) {
+            topic_uri = ref1[i];
+            results.push("WHEN '" + topic_uri + "' THEN 1");
+          }
+          return results;
+        })()).join(" ");
+        sql_sticky = "CASE topic.topic_id || '_' || topic_creator_content.directory " + sql_sticky_whens + " ELSE 0 END AS sticky";
+      } else {
+        sql_sticky = "0 AS sticky";
+      }
+      query = "SELECT\n COUNT(comment_id) AS comments_num, MAX(comment.added) AS last_comment, topic.added as last_added, CASE WHEN MAX(comment.added) IS NULL THEN topic.added ELSE MAX(comment.added) END as last_action,\n topic.*,\n topic_creator_user.value AS topic_creator_user_name,\n topic_creator_content.directory AS topic_creator_address,\n topic.topic_id || '_' || topic_creator_content.directory AS row_topic_uri,\n NULL AS row_topic_sub_uri, NULL AS row_topic_sub_title,\n (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes,\n " + sql_sticky + "\nFROM topic\nLEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id)\nLEFT JOIN json AS topic_creator_content ON (topic_creator_content.directory = topic_creator_json.directory AND topic_creator_content.file_name = 'content.json')\nLEFT JOIN keyvalue AS topic_creator_user ON (topic_creator_user.json_id = topic_creator_content.json_id AND topic_creator_user.key = 'cert_user_id')\nLEFT JOIN comment ON (comment.topic_uri = row_topic_uri AND comment.added < " + (Date.now() / 1000 + 120) + ")\n" + where + "\nGROUP BY topic.topic_id, topic.json_id\nHAVING last_action < " + (Date.now() / 1000 + 120);
       if (!this.parent_topic_uri) {
-        query += "\nUNION ALL\n\nSELECT\n COUNT(comment_id) AS comments_num, MAX(comment.added) AS last_comment, MAX(topic_sub.added) AS last_added, CASE WHEN MAX(topic_sub.added) > MAX(comment.added) OR MAX(comment.added) IS NULL THEN MAX(topic_sub.added) ELSE MAX(comment.added) END as last_action,\n topic.*,\n topic_creator_user.value AS topic_creator_user_name,\n topic_creator_content.directory AS topic_creator_address,\n topic.topic_id || '_' || topic_creator_content.directory AS row_topic_uri,\n topic_sub.topic_id || '_' || topic_sub_creator_content.directory AS row_topic_sub_uri,\n (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes,\n CASE topic.topic_id || '_' || topic_creator_content.directory " + sql_sticky + " ELSE 0 END AS sticky\nFROM topic\nLEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id)\nLEFT JOIN json AS topic_creator_content ON (topic_creator_content.directory = topic_creator_json.directory AND topic_creator_content.file_name = 'content.json')\nLEFT JOIN keyvalue AS topic_creator_user ON (topic_creator_user.json_id = topic_creator_content.json_id AND topic_creator_user.key = 'cert_user_id')\nLEFT JOIN topic AS topic_sub ON (topic_sub.parent_topic_uri = topic.topic_id || '_' || topic_creator_content.directory)\nLEFT JOIN json AS topic_sub_creator_json ON (topic_sub_creator_json.json_id = topic_sub.json_id)\nLEFT JOIN json AS topic_sub_creator_content ON (topic_sub_creator_content.directory = topic_sub_creator_json.directory AND topic_sub_creator_content.file_name = 'content.json')\nLEFT JOIN comment ON (comment.topic_uri = row_topic_sub_uri AND comment.added < " + (Date.now() / 1000 + 120) + ")\nWHERE topic.type = \"group\"\nGROUP BY topic.topic_id\nHAVING last_action < " + (Date.now() / 1000 + 120);
+        query += "\nUNION ALL\n\nSELECT\n COUNT(comment_id) AS comments_num, MAX(comment.added) AS last_comment,\n MAX(topic_sub.added) AS last_added,\n CASE WHEN MAX(topic_sub.added) > MAX(comment.added) OR MAX(comment.added) IS NULL THEN MAX(topic_sub.added) ELSE MAX(comment.added) END as last_action,\n topic.*,\n topic_creator_user.value AS topic_creator_user_name,\n topic_creator_content.directory AS topic_creator_address,\n topic.topic_id || '_' || topic_creator_content.directory AS row_topic_uri,\n topic_sub.topic_id || '_' || topic_sub_creator_content.directory AS row_topic_sub_uri,\n topic_sub.title AS topic_sub_title,\n (SELECT COUNT(*) FROM topic_vote WHERE topic_vote.topic_uri = topic.topic_id || '_' || topic_creator_content.directory)+1 AS votes,\n " + sql_sticky + "\nFROM topic\nLEFT JOIN json AS topic_creator_json ON (topic_creator_json.json_id = topic.json_id)\nLEFT JOIN json AS topic_creator_content ON (topic_creator_content.directory = topic_creator_json.directory AND topic_creator_content.file_name = 'content.json')\nLEFT JOIN keyvalue AS topic_creator_user ON (topic_creator_user.json_id = topic_creator_content.json_id AND topic_creator_user.key = 'cert_user_id')\nLEFT JOIN topic AS topic_sub ON (topic_sub.parent_topic_uri = topic.topic_id || '_' || topic_creator_content.directory)\nLEFT JOIN json AS topic_sub_creator_json ON (topic_sub_creator_json.json_id = topic_sub.json_id)\nLEFT JOIN json AS topic_sub_creator_content ON (topic_sub_creator_content.directory = topic_sub_creator_json.directory AND topic_sub_creator_content.file_name = 'content.json')\nLEFT JOIN comment ON (comment.topic_uri = row_topic_sub_uri AND comment.added < " + (Date.now() / 1000 + 120) + ")\nWHERE topic.type = \"group\"\nGROUP BY topic.topic_id\nHAVING last_action < " + (Date.now() / 1000 + 120);
       }
       if (!this.list_all && !this.parent_topic_uri) {
         query += " ORDER BY sticky DESC, last_action DESC LIMIT 30";
       }
       return Page.cmd("dbQuery", [query], (function(_this) {
         return function(topics) {
-          var elem, topic, topic_parent, _i, _len;
+          var elem, i, len, topic, topic_parent;
           topics.sort(function(a, b) {
             var booster_a, booster_b;
             booster_a = booster_b = 0;
@@ -1369,8 +1417,8 @@ jQuery.extend( jQuery.easing,
             }
             return Math.max(b.last_comment + booster_b, b.last_added + booster_b) - Math.max(a.last_comment + booster_a, a.last_added + booster_a);
           });
-          for (_i = 0, _len = topics.length; _i < _len; _i++) {
-            topic = topics[_i];
+          for (i = 0, len = topics.length; i < len; i++) {
+            topic = topics[i];
             topic_uri = topic.row_topic_uri;
             if (topic.last_added) {
               topic.added = topic.last_added;
@@ -1385,6 +1433,7 @@ jQuery.extend( jQuery.easing,
               if (type !== "noanim") {
                 elem.cssSlideDown();
               }
+              _this.applyTopicListeners(elem, topic);
             }
             elem.insertAfter(last_elem);
             last_elem = elem;
@@ -1402,7 +1451,7 @@ jQuery.extend( jQuery.easing,
             $(".topics-loading").remove();
           }
           if (_this.parent_topic_uri) {
-            $(".topics-title").html("<span class='parent-link'><a href='?Main'>Main</a> &rsaquo;</span> " + topic_parent.title);
+            $(".topics-title").html("<span class='parent-link'><a href='?Main'>" + "Main" + ("</a> &rsaquo;</span> " + topic_parent.title));
           }
           $(".topics").css("opacity", 1);
           if (topics.length === 0) {
@@ -1428,8 +1477,23 @@ jQuery.extend( jQuery.easing,
       })(this));
     };
 
+    TopicList.prototype.applyTopicListeners = function(elem, topic) {
+      return $(".user_menu", elem).on("click", (function(_this) {
+        return function() {
+          var menu;
+          menu = new Menu($(".user_menu", elem));
+          menu.addItem("Mute this user", function() {
+            elem.fancySlideUp();
+            return Page.cmd("muteAdd", [topic.topic_creator_address, topic.topic_creator_user_name, "Topic: " + topic.title]);
+          });
+          menu.show();
+          return false;
+        };
+      })(this));
+    };
+
     TopicList.prototype.applyTopicData = function(elem, topic, type) {
-      var body, last_action, title_hash, topic_uri, url, url_match, visited;
+      var body, last_action, subtopic_title_hash, subtopic_uri, title_hash, topic_uri, url, url_match, visited;
       if (type == null) {
         type = "list";
       }
@@ -1472,8 +1536,11 @@ jQuery.extend( jQuery.easing,
         if (topic.type === "group") {
           $(".comment-num", elem).text("last activity");
           $(".added", elem).text(Time.since(last_action));
-        } else if (topic.comments_num > 0) {
+        } else if (topic.comments_num === 1) {
           $(".comment-num", elem).text(topic.comments_num + " comment");
+          $(".added", elem).text("last " + Time.since(last_action));
+        } else if (topic.comments_num > 0) {
+          $(".comment-num", elem).text(topic.comments_num + " comments");
           $(".added", elem).text("last " + Time.since(last_action));
         } else {
           $(".comment-num", elem).text("0 comments");
@@ -1498,6 +1565,12 @@ jQuery.extend( jQuery.easing,
       }
       if (type === "show") {
         $(".added", elem).text(Time.since(topic.added));
+      }
+      if (topic.row_topic_sub_title) {
+        subtopic_title_hash = Text.toUrl(topic.row_topic_sub_title);
+        subtopic_uri = topic.row_topic_sub_uri;
+        $(".subtopic", elem).css("display", "block");
+        $(".subtopic-link", elem).attr("href", "?Topic:" + subtopic_uri + "/" + subtopic_title_hash).text(topic.row_topic_sub_title);
       }
       if (topic.topic_creator_address === Page.site_info.auth_address) {
         $(elem).attr("data-object", "Topic:" + topic_uri).attr("data-deletable", "yes");
@@ -1670,7 +1743,7 @@ jQuery.extend( jQuery.easing,
             Page.cmd("dbQuery", [_this.queryTopic(parent_topic_id, parent_topic_user_address)], function(parent_res) {
               var parent_topic;
               parent_topic = parent_res[0];
-              return $(".topic-title").html("<span class='parent-link'><a href='?Main'>Main</a> &rsaquo;</span> <span class='parent-link'><a href='?Topics:" + parent_topic.row_topic_uri + "/" + (Text.toUrl(parent_topic.title)) + "'>" + parent_topic.title + "</a> &rsaquo;</span> " + _this.topic.title);
+              return $(".topic-title").html("<span class='parent-link'><a href='?Main'>" + "Main" + ("</a> &rsaquo;</span> <span class='parent-link'><a href='?Topics:" + parent_topic.row_topic_uri + "/" + (Text.toUrl(parent_topic.title)) + "'>" + parent_topic.title + "</a> &rsaquo;</span> " + _this.topic.title));
             });
           }
           $(".topic-full").css("opacity", 1);
@@ -1711,9 +1784,7 @@ jQuery.extend( jQuery.easing,
               if (type !== "noanim") {
                 elem.cssSlideDown();
               }
-              $(".reply", elem).on("click", function(e) {
-                return _this.buttonReply($(e.target).parents(".comment"));
-              });
+              _this.applyCommentListeners(elem, comment);
               $(".score", elem).attr("id", "comment_score_" + comment_uri).on("click", _this.submitCommentVote);
             }
             _this.applyCommentData(elem, comment);
@@ -1744,6 +1815,26 @@ jQuery.extend( jQuery.easing,
       })(this));
     };
 
+    TopicShow.prototype.applyCommentListeners = function(elem, comment) {
+      $(".reply", elem).on("click", (function(_this) {
+        return function(e) {
+          return _this.buttonReply($(e.target).parents(".comment"));
+        };
+      })(this));
+      return $(".menu_3dot", elem).on("click", (function(_this) {
+        return function() {
+          var menu;
+          menu = new Menu($(".menu_3dot", elem));
+          menu.addItem("Mute this user", function() {
+            elem.fancySlideUp();
+            return Page.cmd("muteAdd", [comment.user_address, comment.user_name, "Comment: " + comment.body.slice(0, 21)]);
+          });
+          menu.show();
+          return false;
+        };
+      })(this));
+    };
+
     TopicShow.prototype.applyCommentData = function(elem, comment) {
       var comment_uri, user_name;
       user_name = comment.user_name;
@@ -1770,14 +1861,19 @@ jQuery.extend( jQuery.easing,
     };
 
     TopicShow.prototype.buttonReply = function(elem) {
-      var body_add, elem_quote, post_id, user_name;
+      var body_add, elem_quote, post_id, selected_text, user_name;
       this.log("Reply to", elem);
       user_name = $(".user_name", elem).text();
       post_id = elem.attr("id");
       body_add = "> [" + user_name + "](\#" + post_id + "): ";
       elem_quote = $(".body", elem).clone();
       $("blockquote", elem_quote).remove();
-      body_add += elem_quote.text().trim("\n").replace(/\n/g, "\n> ");
+      selected_text = window.getSelection().toString();
+      if (selected_text) {
+        body_add += selected_text;
+      } else {
+        body_add += elem_quote.text().trim("\n").replace(/\n[\s\S]+/g, " [...]");
+      }
       body_add += "\n\n";
       $(".comment-new #comment_body").val($(".comment-new #comment_body").val() + body_add);
       $(".comment-new #comment_body").trigger("input").focus();
@@ -1786,6 +1882,9 @@ jQuery.extend( jQuery.easing,
 
     TopicShow.prototype.submitComment = function() {
       var body;
+      if (!this.follow.feeds["Comments in this topic"][1].hasClass("selected")) {
+        this.follow.feeds["Comments in this topic"][1].trigger("click");
+      }
       body = $(".comment-new #comment_body").val().trim();
       if (!body) {
         $(".comment-new #comment_body").focus();
@@ -2270,7 +2369,7 @@ jQuery.extend( jQuery.easing,
     };
 
     ZeroTalk.prototype.actionSetSiteInfo = function(res) {
-      var site_info;
+      var mentions_menu_elem, site_info, _ref;
       site_info = res.params;
       this.setSiteinfo(site_info);
       if (site_info.event && site_info.event[0] === "file_done" && site_info.event[1].match(/.*users.*data.json$/)) {
@@ -2285,6 +2384,16 @@ jQuery.extend( jQuery.easing,
             }
           };
         })(this));
+      } else if (((_ref = site_info.event) != null ? _ref[0] : void 0) === "cert_changed" && site_info.cert_user_id) {
+        TopicList.initFollowButton();
+        mentions_menu_elem = TopicList.follow.feeds["Username mentions"][1];
+        return setTimeout(((function(_this) {
+          return function() {
+            if (!mentions_menu_elem.hasClass("selected")) {
+              return mentions_menu_elem.trigger("click");
+            }
+          };
+        })(this)), 100);
       }
     };
 
